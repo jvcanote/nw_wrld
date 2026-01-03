@@ -3,11 +3,11 @@ import path from "path";
 import { produce } from "immer";
 import { migrateToSets, getActiveSet } from "../../shared/utils/setUtils.js";
 import { DEFAULT_GLOBAL_MAPPINGS } from "../../shared/config/defaultConfig.js";
-import { getJsonFilePath } from "../../shared/json/jsonFileBase.js";
 import {
-  atomicWriteFile,
-  atomicWriteFileSync,
-} from "../../shared/json/atomicWrite.js";
+  getJsonFilePath,
+  saveJsonFile,
+  saveJsonFileSync,
+} from "../../shared/json/jsonFileBase.js";
 
 const getMethodsByLayer = (module, moduleBase, threeBase) => {
   if (!module || !module.methods) return [];
@@ -261,13 +261,11 @@ const saveUserData = async (data) => {
     );
     return;
   }
-  const filePath = getUserDataPath();
   try {
     const dataToSave = { ...data };
     delete dataToSave._isDefaultData;
     delete dataToSave._loadedSuccessfully;
-    const dataString = JSON.stringify(dataToSave, null, 2);
-    await atomicWriteFile(filePath, dataString);
+    await saveJsonFile("userData.json", dataToSave);
   } catch (error) {
     console.error("Error writing userData to JSON file:", error);
   }
@@ -286,13 +284,11 @@ const saveUserDataSync = (data) => {
     );
     return;
   }
-  const filePath = getUserDataPath();
   try {
     const dataToSave = { ...data };
     delete dataToSave._isDefaultData;
     delete dataToSave._loadedSuccessfully;
-    const dataString = JSON.stringify(dataToSave, null, 2);
-    atomicWriteFileSync(filePath, dataString);
+    saveJsonFileSync("userData.json", dataToSave);
   } catch (error) {
     console.error("Error writing userData to JSON file (sync):", error);
   }

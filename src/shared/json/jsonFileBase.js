@@ -144,6 +144,7 @@ export const loadJsonFileSync = (filename, defaultValue, errorMsg) => {
 };
 
 export const saveJsonFile = async (filename, data) => {
+  const filePath = getJsonFilePath(filename);
   const status = globalThis.__NW_WRLD_PROJECT_STATUS__;
   if (status && status.ok === false) {
     console.error(
@@ -151,7 +152,6 @@ export const saveJsonFile = async (filename, data) => {
     );
     return;
   }
-  const filePath = getJsonFilePath(filename);
   try {
     const dataString = JSON.stringify(data, null, 2);
     await atomicWriteFile(filePath, dataString);
@@ -161,6 +161,7 @@ export const saveJsonFile = async (filename, data) => {
 };
 
 export const saveJsonFileSync = (filename, data) => {
+  const filePath = getJsonFilePath(filename);
   const status = globalThis.__NW_WRLD_PROJECT_STATUS__;
   if (status && status.ok === false) {
     console.error(
@@ -168,7 +169,6 @@ export const saveJsonFileSync = (filename, data) => {
     );
     return;
   }
-  const filePath = getJsonFilePath(filename);
   try {
     const dataString = JSON.stringify(data, null, 2);
     atomicWriteFileSync(filePath, dataString);
