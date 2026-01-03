@@ -147,6 +147,7 @@ const Projector = {
   pendingTrackName: null,
   pendingReloadData: null,
   previewModuleName: null,
+  previewToken: 0,
   debugOverlayActive: false,
   debugLogQueue: [],
   debugLogTimeout: null,
@@ -523,9 +524,11 @@ const Projector = {
   loadUserData(activeSetIdOverride = null) {
     const userDataPath = getJsonFilePath("userData.json");
     const appStatePath = getJsonFilePath("appState.json");
-    console.log("🔍 [Projector] __dirname:", __dirname);
-    console.log("🔍 [Projector] userDataPath:", userDataPath);
-    console.log("🔍 [Projector] appStatePath:", appStatePath);
+    if (this.debugOverlayActive) {
+      console.log("🔍 [Projector] __dirname:", __dirname);
+      console.log("🔍 [Projector] userDataPath:", userDataPath);
+      console.log("🔍 [Projector] appStatePath:", appStatePath);
+    }
     try {
       const data = fs.readFileSync(userDataPath, "utf-8");
       const parsedData = JSON.parse(data);
@@ -534,7 +537,12 @@ const Projector = {
       let activeSetId = null;
       if (activeSetIdOverride) {
         activeSetId = activeSetIdOverride;
-        console.log("🔍 [Projector] Using activeSetId override:", activeSetId);
+        if (this.debugOverlayActive) {
+          console.log(
+            "🔍 [Projector] Using activeSetId override:",
+            activeSetId
+          );
+        }
       } else {
         try {
           const appStateData = fs.readFileSync(appStatePath, "utf-8");
@@ -542,10 +550,12 @@ const Projector = {
           activeSetId = appState.activeSetId;
           const projectDir = this.getProjectDirFromArgv();
           this.workspacePath = projectDir || appState.workspacePath || null;
-          console.log(
-            "🔍 [Projector] Loaded activeSetId from appState:",
-            activeSetId
-          );
+          if (this.debugOverlayActive) {
+            console.log(
+              "🔍 [Projector] Loaded activeSetId from appState:",
+              activeSetId
+            );
+          }
         } catch (appStateErr) {
           console.warn(
             "⚠️ [Projector] Could not load appState.json, falling back to default set"
@@ -1242,12 +1252,16 @@ const Projector = {
   },
 
   async previewModule(moduleName, moduleData) {
+    const token = ++this.previewToken;
     logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     logger.log(`🎨 [PREVIEW] Starting preview for module: ${moduleName}`);
     logger.log(`🎨 [PREVIEW] Module data received:`, moduleData);
 
     logger.log(`🎨 [PREVIEW] Clearing any existing preview...`);
-    this.clearPreview();
+    const prevName = this.previewModuleName;
+    if (prevName) {
+      this.clearPreviewForModule(prevName);
+    }
 
     const modulesContainer = document.querySelector(".modules");
     logger.log(`🎨 [PREVIEW] Modules container found:`, !!modulesContainer);
@@ -1256,12 +1270,17 @@ const Projector = {
       return;
     }
 
+    if (token !== this.previewToken) {
+      return;
+    }
+
     try {
       logger.log(`🎨 [PREVIEW] Setting preview module name: ${moduleName}`);
       this.previewModuleName = moduleName;
       // Use a special preview key to avoid conflicts with instance IDs
       const previewKey = `preview_${moduleName}`;
-      this.activeModules[previewKey] = [];
+      const instances = [];
+      this.activeModules[previewKey] = instances;
 
       logger.log(`🎨 [PREVIEW] Executing constructor methods...`);
       if (moduleData?.constructor && moduleData.constructor.length > 0) {
@@ -1273,16 +1292,20 @@ const Projector = {
         await this.executeMethods(
           moduleData.constructor,
           previewKey,
-          this.activeModules[previewKey],
+          instances,
           true
         );
 
         logger.log(`✅ [PREVIEW] Constructor methods executed`);
-        logger.log(
-          `✅ [PREVIEW] Created ${this.activeModules[previewKey].length} instance(s)`
-        );
+        logger.log(`✅ [PREVIEW] Created ${instances.length} instance(s)`);
       } else {
         logger.log(`⚠️ [PREVIEW] No constructor methods to execute`);
+      }
+
+      if (token !== this.previewToken) {
+        this.clearPreviewForModule(moduleName, instances);
+        logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        return;
       }
 
       logger.log(`✅✅✅ [PREVIEW] Preview active for: ${moduleName}`);
@@ -1294,13 +1317,14 @@ const Projector = {
       );
       logger.error(`❌ [PREVIEW] Error stack:`, error.stack);
 
-      this.clearPreview();
+      this.clearPreviewForModule(moduleName);
 
       logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     }
   },
 
   clearPreview() {
+    this.previewToken++;
     logger.log(`🧹 [PREVIEW] clearPreview called`);
 
     if (!this.previewModuleName) {
@@ -1309,17 +1333,23 @@ const Projector = {
     }
 
     const moduleName = this.previewModuleName;
+    this.clearPreviewForModule(moduleName);
+  },
+
+  clearPreviewForModule(moduleName, instancesOverride = null) {
     logger.log(`🧹 [PREVIEW] Clearing preview for: ${moduleName}`);
 
     const modulesContainer = document.querySelector(".modules");
     if (!modulesContainer) {
       logger.error("❌ [PREVIEW] No .modules container found");
-      this.previewModuleName = null;
+      if (this.previewModuleName === moduleName) {
+        this.previewModuleName = null;
+      }
       return;
     }
 
     const previewKey = `preview_${moduleName}`;
-    const instances = this.activeModules[previewKey] || [];
+    const instances = instancesOverride || this.activeModules[previewKey] || [];
     logger.log(
       `🧹 [PREVIEW] Found ${instances.length} instance(s) to clean up`
     );
@@ -1350,8 +1380,12 @@ const Projector = {
       }
     });
 
-    delete this.activeModules[previewKey];
-    this.previewModuleName = null;
+    if (this.activeModules[previewKey]) {
+      delete this.activeModules[previewKey];
+    }
+    if (this.previewModuleName === moduleName) {
+      this.previewModuleName = null;
+    }
     logger.log(`✅✅✅ [PREVIEW] Preview cleared successfully`);
   },
 

@@ -10,6 +10,7 @@ import { FaTimes, FaRedo, FaPlay } from "react-icons/fa";
 import fs from "fs";
 import path from "path";
 import { ipcRenderer, clipboard, shell } from "electron";
+import { atomicWriteFileSync } from "../../shared/json/atomicWrite.js";
 import { Button } from "./Button.js";
 import {
   TextInput,
@@ -461,7 +462,7 @@ export const ModuleEditorModal = ({
             fs.mkdirSync(dir, { recursive: true });
           }
           if (!fs.existsSync(absoluteFilePath)) {
-            fs.writeFileSync(absoluteFilePath, template, "utf-8");
+            atomicWriteFileSync(absoluteFilePath, template);
           }
         } catch (err) {
           setError(`Failed to create module: ${err.message}`);

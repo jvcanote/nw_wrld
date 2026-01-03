@@ -481,6 +481,7 @@ const Dashboard = () => {
   const [workspaceModuleFiles, setWorkspaceModuleFiles] = useState([]);
   const [workspaceModuleLoadFailures, setWorkspaceModuleLoadFailures] =
     useState([]);
+  const loadModulesRunIdRef = useRef(0);
   const sequencerEngineRef = useRef(null);
   const sequencerAudioRef = useRef(null);
   const sequencerMutedRef = useRef(false);
@@ -972,6 +973,8 @@ const Dashboard = () => {
   }, []);
 
   const loadModules = useCallback(async () => {
+    const runId = ++loadModulesRunIdRef.current;
+    const isStale = () => runId !== loadModulesRunIdRef.current;
     try {
       if (isWorkspaceModalOpen) return;
       const projectDirArg = getProjectDirFromArgv();
@@ -988,6 +991,7 @@ const Dashboard = () => {
           entries = [];
         }
         const jsFiles = entries.filter((f) => f.endsWith(".js"));
+        if (isStale()) return;
         setWorkspaceModuleFiles(
           jsFiles.map((f) => path.basename(f, ".js")).filter(Boolean)
         );
@@ -1024,9 +1028,11 @@ const Dashboard = () => {
         );
 
         const validModules = modules.filter(Boolean);
+        if (isStale()) return;
         setPredefinedModules(validModules);
         setWorkspaceModuleLoadFailures(Array.from(loadFailures));
         setIsProjectorReady(false);
+        if (isStale()) return;
         sendToProjector("refresh-projector", {});
         return;
       }
