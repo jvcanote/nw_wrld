@@ -9,6 +9,9 @@ const {
 const path = require("path");
 const fs = require("fs");
 const InputManager = require("./main/InputManager");
+const {
+  ensureWorkspaceStarterModules,
+} = require("./main/workspaceStarterModules");
 const { DEFAULT_USER_DATA } = require("./shared/config/defaultConfig");
 
 app.setName("nw_wrld");
@@ -325,118 +328,9 @@ const ensureWorkspaceScaffold = async (workspacePath) => {
     } catch {}
   }
 
-  const helloWorldPath = path.join(modulesDir, "HelloWorld.js");
-  if (!fs.existsSync(helloWorldPath)) {
-    try {
-      fs.writeFileSync(
-        helloWorldPath,
-        [
-          "const { ModuleBase } = globalThis.nwWrldSdk || {};",
-          "",
-          "class HelloWorld extends ModuleBase {",
-          '  static name = "HelloWorld";',
-          '  static category = "Text";',
-          "  static methods = [",
-          "    ...((ModuleBase && ModuleBase.methods) || []),",
-          "    {",
-          '      name: "setText",',
-          "      executeOnLoad: true,",
-          "      options: [",
-          '        { name: "text", defaultVal: "Hello world", type: "text" },',
-          "      ],",
-          "    },",
-          "  ];",
-          "",
-          "  constructor(container) {",
-          "    super(container);",
-          '    this.textEl = document.createElement("div");',
-          "    this.textEl.style.cssText = [",
-          '      "width: 100%;",',
-          '      "height: 100%;",',
-          '      "display: flex;",',
-          '      "align-items: center;",',
-          '      "justify-content: center;",',
-          '      "font-family: monospace;",',
-          '      "font-size: 48px;",',
-          '      "color: white;",',
-          '    ].join(" ");',
-          "    if (this.elem) {",
-          "      this.elem.appendChild(this.textEl);",
-          "    }",
-          '    this.setText({ text: "Hello world" });',
-          "  }",
-          "",
-          '  setText({ text = "Hello world" } = {}) {',
-          "    if (this.textEl) {",
-          "      this.textEl.textContent = String(text);",
-          "    }",
-          "    this.show();",
-          "  }",
-          "",
-          "  destroy() {",
-          "    if (this.textEl && this.textEl.parentNode) {",
-          "      this.textEl.parentNode.removeChild(this.textEl);",
-          "    }",
-          "    this.textEl = null;",
-          "    super.destroy();",
-          "  }",
-          "}",
-          "",
-          "export default HelloWorld;",
-          "",
-        ].join("\n"),
-        "utf-8"
-      );
-    } catch {}
-  }
-
-  const spinningCubePath = path.join(modulesDir, "SpinningCube.js");
-  if (!fs.existsSync(spinningCubePath)) {
-    try {
-      fs.writeFileSync(
-        spinningCubePath,
-        [
-          "const { BaseThreeJsModule } = globalThis.nwWrldSdk || {};",
-          "const THREE = globalThis.THREE;",
-          "",
-          "class SpinningCube extends BaseThreeJsModule {",
-          '  static name = "SpinningCube";',
-          '  static category = "3D";',
-          "  static methods = [",
-          "    ...((BaseThreeJsModule && BaseThreeJsModule.methods) || []),",
-          "  ];",
-          "",
-          "  constructor(container) {",
-          "    super(container);",
-          "    if (!THREE) return;",
-          "    const geometry = new THREE.BoxGeometry(1, 1, 1);",
-          "    const material = new THREE.MeshStandardMaterial({ color: 0x00ff99 });",
-          "    this.cube = new THREE.Mesh(geometry, material);",
-          "    const light = new THREE.DirectionalLight(0xffffff, 2);",
-          "    light.position.set(2, 2, 4);",
-          "    this.scene.add(light);",
-          "    this.setModel(this.cube);",
-          "    this.setCustomAnimate(() => {",
-          "      if (!this.cube) return;",
-          "      this.cube.rotation.x += 0.01;",
-          "      this.cube.rotation.y += 0.015;",
-          "    });",
-          "    this.show();",
-          "  }",
-          "",
-          "  destroy() {",
-          "    this.cube = null;",
-          "    super.destroy();",
-          "  }",
-          "}",
-          "",
-          "export default SpinningCube;",
-          "",
-        ].join("\n"),
-        "utf-8"
-      );
-    } catch {}
-  }
+  try {
+    ensureWorkspaceStarterModules(modulesDir);
+  } catch {}
 };
 
 ipcMain.handle("workspace:select", async () => {
