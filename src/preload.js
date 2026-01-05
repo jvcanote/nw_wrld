@@ -71,6 +71,7 @@ const nwWrldBridge = {
       ipcRenderer.sendSync("bridge:app:getMethodCode", moduleName, methodName),
     getKickMp3ArrayBuffer: () =>
       ipcRenderer.sendSync("bridge:app:getKickMp3ArrayBuffer"),
+    isPackaged: () => ipcRenderer.sendSync("bridge:app:isPackaged"),
   },
   messaging: {
     sendToProjector: (type, props = {}) =>

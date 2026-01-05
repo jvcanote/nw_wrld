@@ -180,7 +180,7 @@ const Projector = {
   },
 
   queueDebugLog(log) {
-    if (!this.debugOverlayActive) return;
+    if (!this.debugOverlayActive || !logger.debugEnabled) return;
 
     this.debugLogQueue.push(log);
     if (!this.debugLogTimeout) {
@@ -500,65 +500,84 @@ const Projector = {
     if (!messaging || typeof messaging.onInputEvent !== "function") return;
     messaging.onInputEvent((event, payload) => {
       const { type, data } = payload;
+      const debugEnabled = logger.debugEnabled;
 
-      logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      logger.log(`🎵 [INPUT] Event type: ${type}, source: ${data.source}`);
+      if (debugEnabled) {
+        logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        logger.log(`🎵 [INPUT] Event type: ${type}, source: ${data.source}`);
+      }
 
       let trackName = null;
       const timestamp = data.timestamp || performance.now() / 1000;
 
       switch (type) {
         case "track-selection":
-          logger.log("🎯 [INPUT] Track selection event...");
+          if (debugEnabled) logger.log("🎯 [INPUT] Track selection event...");
 
           if (data.source === "midi") {
             const trackNameFromNote = midiConfig.trackTriggersMap[data.note];
-            logger.log(
-              `🎯 [INPUT] Note ${data.note} maps to track:`,
-              trackNameFromNote
-            );
+            if (debugEnabled) {
+              logger.log(
+                `🎯 [INPUT] Note ${data.note} maps to track:`,
+                trackNameFromNote
+              );
+            }
 
             if (trackNameFromNote) {
-              logger.log(`✅ [INPUT] Activating track: "${trackNameFromNote}"`);
+              if (debugEnabled) {
+                logger.log(
+                  `✅ [INPUT] Activating track: "${trackNameFromNote}"`
+                );
+              }
               trackName = trackNameFromNote;
               this.handleTrackSelection(trackNameFromNote);
             } else {
-              logger.warn(
-                `⚠️ [INPUT] Note ${data.note} not mapped to any track`
-              );
+              if (debugEnabled) {
+                logger.warn(
+                  `⚠️ [INPUT] Note ${data.note} not mapped to any track`
+                );
+              }
             }
           } else if (data.source === "osc") {
             const trackNameFromIdentifier =
               midiConfig.trackTriggersMap[data.identifier];
-            logger.log(
-              `🎯 [INPUT] OSC address ${data.identifier} maps to track:`,
-              trackNameFromIdentifier
-            );
+            if (debugEnabled) {
+              logger.log(
+                `🎯 [INPUT] OSC address ${data.identifier} maps to track:`,
+                trackNameFromIdentifier
+              );
+            }
 
             if (trackNameFromIdentifier) {
-              logger.log(
-                `✅ [INPUT] Activating track: "${trackNameFromIdentifier}"`
-              );
+              if (debugEnabled) {
+                logger.log(
+                  `✅ [INPUT] Activating track: "${trackNameFromIdentifier}"`
+                );
+              }
               trackName = trackNameFromIdentifier;
               this.handleTrackSelection(trackNameFromIdentifier);
             } else {
-              logger.warn(
-                `⚠️ [INPUT] OSC address ${data.identifier} not mapped to any track`
-              );
-              logger.log(
-                "📋 [INPUT] Available OSC mappings:",
-                Object.keys(midiConfig.trackTriggersMap)
-              );
+              if (debugEnabled) {
+                logger.warn(
+                  `⚠️ [INPUT] OSC address ${data.identifier} not mapped to any track`
+                );
+                logger.log(
+                  "📋 [INPUT] Available OSC mappings:",
+                  Object.keys(midiConfig.trackTriggersMap)
+                );
+              }
             }
           }
           break;
 
         case "method-trigger":
-          logger.log("🎯 [INPUT] Method trigger event...");
-          logger.log(
-            "🎯 [INPUT] Current active track:",
-            this.activeTrack?.name
-          );
+          if (debugEnabled) {
+            logger.log("🎯 [INPUT] Method trigger event...");
+            logger.log(
+              "🎯 [INPUT] Current active track:",
+              this.activeTrack?.name
+            );
+          }
 
           let channelNames = [];
           const activeTrackName = this.activeTrack?.name;
@@ -572,10 +591,12 @@ const Projector = {
                 channelNames = Array.isArray(mappedChannels)
                   ? mappedChannels
                   : [mappedChannels];
-                logger.log(
-                  `🎯 [INPUT] Note ${data.note} maps to channels:`,
-                  channelNames
-                );
+                if (debugEnabled) {
+                  logger.log(
+                    `🎯 [INPUT] Note ${data.note} maps to channels:`,
+                    channelNames
+                  );
+                }
               }
             } else if (data.source === "osc") {
               const mappedChannels = trackMappings[data.channelName];
@@ -583,24 +604,30 @@ const Projector = {
                 channelNames = Array.isArray(mappedChannels)
                   ? mappedChannels
                   : [mappedChannels];
-                logger.log(
-                  `🎯 [INPUT] OSC address maps to channels:`,
-                  channelNames
-                );
+                if (debugEnabled) {
+                  logger.log(
+                    `🎯 [INPUT] OSC address maps to channels:`,
+                    channelNames
+                  );
+                }
               }
             }
           } else {
-            logger.warn(
-              `⚠️ [INPUT] No channel mappings for track "${activeTrackName}"`
-            );
+            if (debugEnabled) {
+              logger.warn(
+                `⚠️ [INPUT] No channel mappings for track "${activeTrackName}"`
+              );
+            }
           }
 
           if (channelNames.length > 0 && activeTrackName) {
             trackName = activeTrackName;
             channelNames.forEach((channelName) => {
-              logger.log(
-                `✅ [INPUT] Triggering ${channelName} on track "${activeTrackName}"`
-              );
+              if (debugEnabled) {
+                logger.log(
+                  `✅ [INPUT] Triggering ${channelName} on track "${activeTrackName}"`
+                );
+              }
               this.handleChannelMessage(`/Ableton/${channelName}`, {
                 note: data.note,
                 channel: data.channel,
@@ -611,28 +638,34 @@ const Projector = {
               });
             });
           } else if (channelNames.length === 0) {
-            logger.warn(`⚠️ [INPUT] Event not mapped to any channel`);
+            if (debugEnabled) {
+              logger.warn(`⚠️ [INPUT] Event not mapped to any channel`);
+            }
           } else if (!activeTrackName) {
-            logger.warn(`⚠️ [INPUT] No active track - select a track first`);
+            if (debugEnabled) {
+              logger.warn(`⚠️ [INPUT] No active track - select a track first`);
+            }
           }
           break;
       }
 
-      const timeStr = timestamp.toFixed(5);
-      const source = data.source === "midi" ? "MIDI" : "OSC";
-      let log = `[${timeStr}] ${source} Event\n`;
-      if (data.source === "midi") {
-        log += `  Note: ${data.note}\n`;
-        log += `  Channel: ${data.channel}\n`;
-      } else if (data.source === "osc") {
-        log += `  Address: ${data.address}\n`;
+      if (this.debugOverlayActive && debugEnabled) {
+        const timeStr = timestamp.toFixed(5);
+        const source = data.source === "midi" ? "MIDI" : "OSC";
+        let log = `[${timeStr}] ${source} Event\n`;
+        if (data.source === "midi") {
+          log += `  Note: ${data.note}\n`;
+          log += `  Channel: ${data.channel}\n`;
+        } else if (data.source === "osc") {
+          log += `  Address: ${data.address}\n`;
+        }
+        if (trackName) {
+          log += `  Track: ${trackName}\n`;
+        }
+        this.queueDebugLog(log);
       }
-      if (trackName) {
-        log += `  Track: ${trackName}\n`;
-      }
-      this.queueDebugLog(log);
 
-      logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      if (debugEnabled) logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     });
   },
 
@@ -671,11 +704,13 @@ const Projector = {
     this.userData = getActiveSetTracks(migratedData, activeSetId);
     this.config = migratedData.config || {};
     this.inputType = migratedData.config?.input?.type || "midi";
-    console.log(
-      `✅ [Projector] Loaded ${this.userData.length} tracks from set: ${
-        activeSetId || "default"
-      }`
-    );
+    if (logger.debugEnabled) {
+      console.log(
+        `✅ [Projector] Loaded ${this.userData.length} tracks from set: ${
+          activeSetId || "default"
+        }`
+      );
+    }
   },
 
   refreshPage() {
@@ -724,24 +759,31 @@ const Projector = {
   },
 
   async handleTrackSelection(trackName) {
-    logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    logger.log("📦 [TRACK] handleTrackSelection called with:", trackName);
-    logger.log("📦 [TRACK] Current userData:", this.userData);
-    logger.log("📦 [TRACK] Looking for track with name:", trackName);
+    const debugEnabled = logger.debugEnabled;
+    if (debugEnabled) {
+      logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      logger.log("📦 [TRACK] handleTrackSelection called with:", trackName);
+      logger.log("📦 [TRACK] Current userData:", this.userData);
+      logger.log("📦 [TRACK] Looking for track with name:", trackName);
+    }
 
     // If already loading, store this as pending and return
     if (this.isLoadingTrack) {
       // If requesting the same track that's loading, ignore
       if (this.activeTrack?.name === trackName) {
-        logger.log(
-          "⚠️ [TRACK] Already loading this track, ignoring duplicate request"
-        );
+        if (debugEnabled) {
+          logger.log(
+            "⚠️ [TRACK] Already loading this track, ignoring duplicate request"
+          );
+        }
         return;
       }
       // Store the new track as pending (latest request wins)
-      logger.log(
-        `⚠️ [TRACK] Track load in progress, queueing "${trackName}" as pending`
-      );
+      if (debugEnabled) {
+        logger.log(
+          `⚠️ [TRACK] Track load in progress, queueing "${trackName}" as pending`
+        );
+      }
       this.pendingTrackName = trackName;
       return;
     }
@@ -750,37 +792,43 @@ const Projector = {
     this.isLoadingTrack = true;
 
     const track = find(this.userData, { name: trackName });
-    logger.log("📦 [TRACK] Track found:", track);
+    if (debugEnabled) logger.log("📦 [TRACK] Track found:", track);
 
     if (!track) {
       logger.error(`❌ [TRACK] Track "${trackName}" not found in userData`);
-      logger.log(
-        "📦 [TRACK] Available tracks:",
-        this.userData.map((t) => t.name)
-      );
+      if (debugEnabled) {
+        logger.log(
+          "📦 [TRACK] Available tracks:",
+          this.userData.map((t) => t.name)
+        );
+      }
       this.deactivateActiveTrack();
       this.isLoadingTrack = false;
       return;
     }
 
-    logger.log("📦 [TRACK] Current activeTrack:", this.activeTrack);
+    if (debugEnabled)
+      logger.log("📦 [TRACK] Current activeTrack:", this.activeTrack);
 
     if (this.activeTrack && this.activeTrack.name !== trackName) {
-      logger.log(
-        "📦 [TRACK] Deactivating previous track:",
-        this.activeTrack.name
-      );
+      if (debugEnabled) {
+        logger.log(
+          "📦 [TRACK] Deactivating previous track:",
+          this.activeTrack.name
+        );
+      }
       this.deactivateActiveTrack();
     }
 
     if (this.activeTrack?.name === trackName) {
-      logger.log("⚠️ [TRACK] Track already active, skipping");
+      if (debugEnabled) logger.log("⚠️ [TRACK] Track already active, skipping");
       this.isLoadingTrack = false;
       return;
     }
 
     const modulesContainer = document.querySelector(".modules");
-    logger.log("📦 [TRACK] Modules container:", modulesContainer);
+    if (debugEnabled)
+      logger.log("📦 [TRACK] Modules container:", modulesContainer);
 
     if (!modulesContainer) {
       logger.error("❌ [TRACK] No .modules container found in DOM!");
@@ -788,14 +836,15 @@ const Projector = {
       return;
     }
 
-    logger.log("📦 [TRACK] Track modules to load:", track.modules);
+    if (debugEnabled)
+      logger.log("📦 [TRACK] Track modules to load:", track.modules);
 
     if (!Array.isArray(track.modules)) {
       logger.error(
         `❌ [TRACK] Track "${trackName}" has invalid modules array:`,
         track.modules
       );
-      logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      if (debugEnabled) logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
       this.isLoadingTrack = false;
       return;
     }
@@ -827,7 +876,8 @@ const Projector = {
         throw new Error("ASSETS_BASE_URL_UNAVAILABLE");
       }
 
-      logger.log("⏳ [TRACK] Waiting for sandbox track init...");
+      if (debugEnabled)
+        logger.log("⏳ [TRACK] Waiting for sandbox track init...");
       const res = await this.trackSandboxHost.initTrack({
         track,
         moduleSources,
@@ -843,11 +893,18 @@ const Projector = {
         if (!instanceId) continue;
         this.activeModules[instanceId] = [{}];
       }
-      logger.log("✅ [TRACK] Sandbox track initialized");
+      if (debugEnabled) logger.log("✅ [TRACK] Sandbox track initialized");
 
-      logger.log(`✅✅✅ [TRACK] Track activated successfully: "${trackName}"`);
-      logger.log("📦 [TRACK] Active modules:", Object.keys(this.activeModules));
-      logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      if (debugEnabled) {
+        logger.log(
+          `✅✅✅ [TRACK] Track activated successfully: "${trackName}"`
+        );
+        logger.log(
+          "📦 [TRACK] Active modules:",
+          Object.keys(this.activeModules)
+        );
+        logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      }
     } catch (error) {
       logger.error(
         `❌ [TRACK] Failed to activate track "${trackName}":`,
@@ -862,7 +919,8 @@ const Projector = {
     if (this.pendingTrackName) {
       const nextTrack = this.pendingTrackName;
       this.pendingTrackName = null;
-      logger.log(`🔄 [TRACK] Loading pending track: "${nextTrack}"`);
+      if (debugEnabled)
+        logger.log(`🔄 [TRACK] Loading pending track: "${nextTrack}"`);
       this.handleTrackSelection(nextTrack);
       return;
     }
@@ -914,7 +972,9 @@ const Projector = {
     if (!this.activeTrack) return;
 
     if (this.isLoadingTrack) {
-      logger.warn(`Ignoring channel trigger during track initialization`);
+      if (logger.debugEnabled) {
+        logger.warn(`Ignoring channel trigger during track initialization`);
+      }
       return;
     }
 
@@ -923,20 +983,24 @@ const Projector = {
 
     if (channelMatch && channelMatch[1]) {
       const channelNumber = channelMatch[1];
-      logger.log(`Received message for channel: ${channelNumber}`);
+      if (logger.debugEnabled) {
+        logger.log(`Received message for channel: ${channelNumber}`);
+      }
       const { modulesData } = track;
       if (!this.activeChannelHandlers[channelNumber]) {
         this.activeChannelHandlers = this.buildChannelHandlerMap(track);
       }
       const channelTargets = this.activeChannelHandlers[channelNumber] || [];
       if (channelTargets.length === 0) {
-        logger.warn(`No modules mapped to channel ${channelNumber}`);
+        if (logger.debugEnabled) {
+          logger.warn(`No modules mapped to channel ${channelNumber}`);
+        }
         return;
       }
 
       await Promise.all(
         channelTargets.map(async ({ instanceId, moduleType }) => {
-          if (this.debugOverlayActive) {
+          if (this.debugOverlayActive && logger.debugEnabled) {
             Projector.logToMain(
               `instanceId: ${instanceId}, moduleType: ${moduleType}`
             );
@@ -963,7 +1027,9 @@ const Projector = {
         })
       );
     } else {
-      logger.warn(`Invalid channel path received: ${channelPath}`);
+      if (logger.debugEnabled) {
+        logger.warn(`Invalid channel path received: ${channelPath}`);
+      }
     }
   },
 
@@ -996,9 +1062,12 @@ const Projector = {
     isConstructor = false,
     debugContext = {}
   ) {
-    logger.log(`⏱️ executeMethods start: ${instanceId}`);
+    const debugEnabled = logger.debugEnabled;
+    const overlayDebug = debugEnabled && this.debugOverlayActive;
 
-    if (this.debugOverlayActive) {
+    if (debugEnabled) logger.log(`⏱️ executeMethods start: ${instanceId}`);
+
+    if (overlayDebug) {
       Projector.logToMain(`${performance.now()}`);
       Projector.logToMain(`executeMethods: ${instanceId}`);
     }
@@ -1027,40 +1096,49 @@ const Projector = {
       }
     }
 
-    logger.log(`⏱️ Other methods execution start: ${instanceId}`);
+    if (debugEnabled)
+      logger.log(`⏱️ Other methods execution start: ${instanceId}`);
     await Promise.all(
       otherMethods.map(async ({ name: methodName, options: methodOptions }) => {
         const options = buildMethodOptions(methodOptions, {
           onInvalidRandomRange: ({ name, min, max, value }) => {
-            console.warn(
-              `[Projector] Invalid randomRange for "${name}": [${min}, ${max}] - expected numbers. Using value: ${value}`
-            );
+            if (debugEnabled) {
+              console.warn(
+                `[Projector] Invalid randomRange for "${name}": [${min}, ${max}] - expected numbers. Using value: ${value}`
+              );
+            }
           },
           onSwapRandomRange: ({ name, min, max }) => {
-            console.warn(
-              `[Projector] Invalid randomRange for "${name}": min (${min}) > max (${max}). Swapping values.`
-            );
+            if (debugEnabled) {
+              console.warn(
+                `[Projector] Invalid randomRange for "${name}": min (${min}) > max (${max}). Swapping values.`
+              );
+            }
           },
         });
 
-        const timestamp = (
-          debugContext.timestamp || performance.now() / 1000
-        ).toFixed(5);
-        let log = `[${timestamp}] Method Execution\n`;
-        if (debugContext.trackName) {
-          log += `  Track: ${debugContext.trackName}\n`;
+        if (overlayDebug) {
+          const timestamp = (
+            debugContext.timestamp || performance.now() / 1000
+          ).toFixed(5);
+          let log = `[${timestamp}] Method Execution\n`;
+          if (debugContext.trackName) {
+            log += `  Track: ${debugContext.trackName}\n`;
+          }
+          if (debugContext.moduleInfo) {
+            log += `  Module: ${debugContext.moduleInfo.instanceId} (${debugContext.moduleInfo.type})\n`;
+          }
+          log += `  Method: ${methodName}\n`;
+          if (options && Object.keys(options).length > 0) {
+            log += `  Props: ${JSON.stringify(options, null, 2)}\n`;
+          }
+          this.queueDebugLog(log);
         }
-        if (debugContext.moduleInfo) {
-          log += `  Module: ${debugContext.moduleInfo.instanceId} (${debugContext.moduleInfo.type})\n`;
-        }
-        log += `  Method: ${methodName}\n`;
-        if (options && Object.keys(options).length > 0) {
-          log += `  Props: ${JSON.stringify(options, null, 2)}\n`;
-        }
-        this.queueDebugLog(log);
 
-        logger.log(`⏱️ Method start: ${methodName} for ${instanceId}`);
-        if (this.debugOverlayActive) {
+        if (debugEnabled) {
+          logger.log(`⏱️ Method start: ${methodName} for ${instanceId}`);
+        }
+        if (overlayDebug) {
           Projector.logToMain(
             `${JSON.stringify(options)} [${performance.now()}]`
           );
@@ -1078,21 +1156,28 @@ const Projector = {
         }
 
         if (isConstructor) {
-          logger.log(
-            `Executed constructor method "${methodName}" on module "${instanceId}".`
-          );
+          if (debugEnabled) {
+            logger.log(
+              `Executed constructor method "${methodName}" on module "${instanceId}".`
+            );
+          }
         } else {
-          logger.log(
-            `Executed method "${methodName}" with options ${JSON.stringify(
-              options
-            )} on module "${instanceId}".`
-          );
+          if (debugEnabled) {
+            logger.log(
+              `Executed method "${methodName}" with options ${JSON.stringify(
+                options
+              )} on module "${instanceId}".`
+            );
+          }
         }
-        logger.log(`⏱️ Method end: ${methodName} for ${instanceId}`);
+        if (debugEnabled)
+          logger.log(`⏱️ Method end: ${methodName} for ${instanceId}`);
       })
     );
-    logger.log(`⏱️ Other methods execution end: ${instanceId}`);
-    logger.log(`⏱️ executeMethods end: ${instanceId}`);
+    if (debugEnabled) {
+      logger.log(`⏱️ Other methods execution end: ${instanceId}`);
+      logger.log(`⏱️ executeMethods end: ${instanceId}`);
+    }
   },
 
   toggleAspectRatioStyle(selectedRatioId) {
@@ -1102,7 +1187,9 @@ const Projector = {
       (r) => r.id === selectedRatioId
     );
     if (!ratio) {
-      logger.warn(`Aspect ratio "${selectedRatioId}" not found in settings`);
+      if (logger.debugEnabled) {
+        logger.warn(`Aspect ratio "${selectedRatioId}" not found in settings`);
+      }
       document.body.style = ``;
       return;
     }
@@ -1129,7 +1216,9 @@ const Projector = {
   setBg(colorId) {
     const color = this.settings.backgroundColors.find((c) => c.id === colorId);
     if (!color) {
-      logger.warn(`Background color "${colorId}" not found in settings`);
+      if (logger.debugEnabled) {
+        logger.warn(`Background color "${colorId}" not found in settings`);
+      }
       return;
     }
 
@@ -1147,18 +1236,22 @@ const Projector = {
 
   async previewModule(moduleName, moduleData) {
     const token = ++this.previewToken;
-    logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    logger.log(`🎨 [PREVIEW] Starting preview for module: ${moduleName}`);
-    logger.log(`🎨 [PREVIEW] Module data received:`, moduleData);
-
-    logger.log(`🎨 [PREVIEW] Clearing any existing preview...`);
+    const debugEnabled = logger.debugEnabled;
+    if (debugEnabled) {
+      logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      logger.log(`🎨 [PREVIEW] Starting preview for module: ${moduleName}`);
+      logger.log(`🎨 [PREVIEW] Module data received:`, moduleData);
+      logger.log(`🎨 [PREVIEW] Clearing any existing preview...`);
+    }
     const prevName = this.previewModuleName;
     if (prevName) {
       this.clearPreviewForModule(prevName);
     }
 
     const modulesContainer = document.querySelector(".modules");
-    logger.log(`🎨 [PREVIEW] Modules container found:`, !!modulesContainer);
+    if (debugEnabled) {
+      logger.log(`🎨 [PREVIEW] Modules container found:`, !!modulesContainer);
+    }
     if (!modulesContainer) {
       logger.error("❌ [PREVIEW] No .modules container found in DOM");
       return;
@@ -1169,7 +1262,9 @@ const Projector = {
     }
 
     try {
-      logger.log(`🎨 [PREVIEW] Setting preview module name: ${moduleName}`);
+      if (debugEnabled) {
+        logger.log(`🎨 [PREVIEW] Setting preview module name: ${moduleName}`);
+      }
       this.previewModuleName = moduleName;
       const previewKey = `preview_${moduleName}`;
 
@@ -1218,12 +1313,14 @@ const Projector = {
 
       if (token !== this.previewToken) {
         this.clearPreviewForModule(moduleName);
-        logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        if (debugEnabled) logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
         return;
       }
 
-      logger.log(`✅✅✅ [PREVIEW] Preview active for: ${moduleName}`);
-      logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      if (debugEnabled) {
+        logger.log(`✅✅✅ [PREVIEW] Preview active for: ${moduleName}`);
+        logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      }
     } catch (error) {
       logger.error(
         `❌ [PREVIEW] Error instantiating module "${moduleName}":`,
@@ -1233,16 +1330,17 @@ const Projector = {
 
       this.clearPreviewForModule(moduleName);
 
-      logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      if (debugEnabled) logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     }
   },
 
   clearPreview() {
     this.previewToken++;
-    logger.log(`🧹 [PREVIEW] clearPreview called`);
+    const debugEnabled = logger.debugEnabled;
+    if (debugEnabled) logger.log(`🧹 [PREVIEW] clearPreview called`);
 
     if (!this.previewModuleName) {
-      logger.log(`🧹 [PREVIEW] No preview module to clear`);
+      if (debugEnabled) logger.log(`🧹 [PREVIEW] No preview module to clear`);
       return;
     }
 
@@ -1251,7 +1349,9 @@ const Projector = {
   },
 
   clearPreviewForModule(moduleName) {
-    logger.log(`🧹 [PREVIEW] Clearing preview for: ${moduleName}`);
+    const debugEnabled = logger.debugEnabled;
+    if (debugEnabled)
+      logger.log(`🧹 [PREVIEW] Clearing preview for: ${moduleName}`);
 
     const modulesContainer = document.querySelector(".modules");
     if (!modulesContainer) {
@@ -1278,7 +1378,8 @@ const Projector = {
     if (this.previewModuleName === moduleName) {
       this.previewModuleName = null;
     }
-    logger.log(`✅✅✅ [PREVIEW] Preview cleared successfully`);
+    if (debugEnabled)
+      logger.log(`✅✅✅ [PREVIEW] Preview cleared successfully`);
 
     const restore = this.restoreTrackNameAfterPreview;
     this.restoreTrackNameAfterPreview = null;
@@ -1288,15 +1389,18 @@ const Projector = {
   },
 
   async triggerPreviewMethod(moduleName, methodName, options) {
-    logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    logger.log(
-      `🎯 [PREVIEW] Triggering method "${methodName}" on preview: ${moduleName}`
-    );
-    logger.log(`🎯 [PREVIEW] Options:`, options);
+    const debugEnabled = logger.debugEnabled;
+    if (debugEnabled) {
+      logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      logger.log(
+        `🎯 [PREVIEW] Triggering method "${methodName}" on preview: ${moduleName}`
+      );
+      logger.log(`🎯 [PREVIEW] Options:`, options);
+    }
 
     if (!this.previewModuleName || this.previewModuleName !== moduleName) {
       logger.error(`❌ [PREVIEW] No active preview for module: ${moduleName}`);
-      logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      if (debugEnabled) logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
       return;
     }
 
@@ -1309,15 +1413,17 @@ const Projector = {
       if (!res || res.ok !== true) {
         throw new Error(res?.error || "SANDBOX_PREVIEW_INVOKE_FAILED");
       }
-      logger.log(`✅✅✅ [PREVIEW] Method trigger completed`);
-      logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      if (debugEnabled) {
+        logger.log(`✅✅✅ [PREVIEW] Method trigger completed`);
+        logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      }
     } catch (error) {
       logger.error(
         `❌ [PREVIEW] Error triggering method "${methodName}":`,
         error
       );
       logger.error(`❌ [PREVIEW] Error stack:`, error.stack);
-      logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      if (debugEnabled) logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     }
   },
 };

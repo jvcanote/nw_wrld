@@ -14,7 +14,10 @@ const path = require("path");
 const fs = require("fs");
 const { pathToFileURL } = require("url");
 const InputManager = require("./main/InputManager");
-const { atomicWriteFileSync } = require("./shared/json/atomicWrite.cjs");
+const {
+  atomicWriteFile,
+  atomicWriteFileSync,
+} = require("./shared/json/atomicWrite.cjs");
 const {
   ensureWorkspaceStarterModules,
 } = require("./main/workspaceStarterModules");
@@ -969,7 +972,7 @@ ipcMain.handle("bridge:json:write", async (event, filename, data) => {
   const filePath = path.join(dir, safeName);
   try {
     await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
-    atomicWriteFileSync(filePath, JSON.stringify(data, null, 2));
+    await atomicWriteFile(filePath, JSON.stringify(data, null, 2));
     return { ok: true };
   } catch (e) {
     return { ok: false, reason: e?.message || "WRITE_FAILED" };
@@ -1026,6 +1029,14 @@ ipcMain.on("bridge:app:getBaseMethodNames", (event) => {
     };
   } catch {
     event.returnValue = { moduleBase: [], threeBase: [] };
+  }
+});
+
+ipcMain.on("bridge:app:isPackaged", (event) => {
+  try {
+    event.returnValue = Boolean(app.isPackaged);
+  } catch {
+    event.returnValue = true;
   }
 });
 

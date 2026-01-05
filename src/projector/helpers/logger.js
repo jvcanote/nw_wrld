@@ -13,9 +13,19 @@
  * - console.error is always active for critical errors
  */
 
-const DEBUG = true; // Set to true to enable debug logging
+const isPackaged = (() => {
+  try {
+    const bridge = globalThis.nwWrldBridge;
+    const fn = bridge?.app?.isPackaged;
+    if (typeof fn === "function") return Boolean(fn());
+  } catch {}
+  return true;
+})();
+
+const DEBUG = !isPackaged;
 
 export const logger = {
+  debugEnabled: DEBUG,
   /**
    * Debug logging - disabled in production for performance
    */
