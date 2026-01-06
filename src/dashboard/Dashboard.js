@@ -655,6 +655,19 @@ const Dashboard = () => {
     isInitialMountInput.current = false;
   }, [inputConfig]);
 
+  const prevSequencerModeRef = useRef(undefined);
+  useEffect(() => {
+    const next = userData?.config?.sequencerMode;
+    const prev = prevSequencerModeRef.current;
+    prevSequencerModeRef.current = next;
+
+    if (prev === true && next === false) {
+      invokeIPC("input:configure", inputConfig).catch((err) => {
+        console.error("[Dashboard] Failed to configure input:", err);
+      });
+    }
+  }, [userData?.config?.sequencerMode, inputConfig, invokeIPC]);
+
   useIPCListener("from-projector", (event, data) => {
     if (data.type === "debug-log") {
       const rawLog =

@@ -1651,9 +1651,11 @@ function createWindow(projectDir) {
     inputManager = new InputManager(dashboardWindow, projector1Window);
     const { DEFAULT_INPUT_CONFIG } = require("./shared/config/defaultConfig");
     const inputConfig = fullConfig.config?.input || DEFAULT_INPUT_CONFIG;
-    inputManager.initialize(inputConfig).catch((err) => {
-      console.error("[Main] Failed to initialize InputManager:", err);
-    });
+    if (fullConfig.config?.sequencerMode !== true) {
+      inputManager.initialize(inputConfig).catch((err) => {
+        console.error("[Main] Failed to initialize InputManager:", err);
+      });
+    }
   });
 
   if (projectDir && typeof projectDir === "string") {

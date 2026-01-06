@@ -104,7 +104,21 @@ class InputManager {
     return new Promise((resolve, reject) => {
       const setupMIDI = () => {
         try {
-          const input = WebMidi.getInputByName(midiConfig.deviceName);
+          const deviceId =
+            typeof midiConfig.deviceId === "string" &&
+            midiConfig.deviceId.trim()
+              ? midiConfig.deviceId.trim()
+              : null;
+          const deviceName =
+            typeof midiConfig.deviceName === "string" &&
+            midiConfig.deviceName.trim()
+              ? midiConfig.deviceName.trim()
+              : "";
+
+          const input =
+            (deviceId && typeof WebMidi.getInputById === "function"
+              ? WebMidi.getInputById(deviceId)
+              : null) || WebMidi.getInputByName(deviceName);
           if (!input) {
             const error = new Error(
               `MIDI device "${midiConfig.deviceName}" not found`
