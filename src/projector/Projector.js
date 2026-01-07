@@ -1349,12 +1349,19 @@ const Projector = {
       const previewKey = `preview_${moduleName}`;
 
       const src = await this.loadWorkspaceModuleSource(moduleName);
+      if (token !== this.previewToken) {
+        return;
+      }
       const moduleSources = { [moduleName]: { text: src?.text || "" } };
 
       if (this.activeTrack?.name) {
         this.restoreTrackNameAfterPreview = this.activeTrack.name;
       } else {
         this.restoreTrackNameAfterPreview = null;
+      }
+
+      if (this.restoreTrackNameAfterPreview) {
+        this.deactivateActiveTrack();
       }
 
       try {
@@ -1364,6 +1371,14 @@ const Projector = {
       this.trackModuleSources = moduleSources;
 
       await this.trackSandboxHost.ensureSandbox();
+      if (token !== this.previewToken) {
+        try {
+          this.trackSandboxHost?.destroy?.();
+        } catch {}
+        this.trackSandboxHost = null;
+        this.trackModuleSources = null;
+        return;
+      }
       const assetsBaseUrl = this.getAssetsBaseUrlForSandboxToken(
         this.trackSandboxHost.token
       );
@@ -1381,6 +1396,15 @@ const Projector = {
         },
       };
 
+      if (token !== this.previewToken) {
+        try {
+          this.trackSandboxHost?.destroy?.();
+        } catch {}
+        this.trackSandboxHost = null;
+        this.trackModuleSources = null;
+        return;
+      }
+
       const res = await this.trackSandboxHost.initTrack({
         track,
         moduleSources,
@@ -1388,6 +1412,11 @@ const Projector = {
       });
       if (!res || res.ok !== true) {
         throw new Error(res?.error || "SANDBOX_PREVIEW_INIT_FAILED");
+      }
+      if (token !== this.previewToken) {
+        this.clearPreviewForModule(moduleName);
+        if (debugEnabled) logger.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        return;
       }
       this.activeModules[previewKey] = [{}];
 
@@ -1464,6 +1493,7 @@ const Projector = {
     const restore = this.restoreTrackNameAfterPreview;
     this.restoreTrackNameAfterPreview = null;
     if (restore) {
+      this.activeTrack = null;
       this.handleTrackSelection(restore);
     }
   },
