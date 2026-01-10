@@ -121,7 +121,11 @@
       "target": [
         "dmg"
       ],
-      "icon": "build/logo.icns"
+      "icon": "build/logo.icns",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true
     },
     "win": {
       "target": [
