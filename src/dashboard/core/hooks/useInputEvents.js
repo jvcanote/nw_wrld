@@ -188,9 +188,13 @@ export const useInputEvents = ({
 
               const wasRecording = recordingStateRef.current[targetTrack.id];
               if (wasRecording) {
-                setRecordingData((prev) =>
-                  setRecordingForTrack(prev, targetTrack.id, { channels: [] })
-                );
+                setRecordingData((prev) => {
+                  const existing = getRecordingForTrack(prev, targetTrack.id);
+                  return setRecordingForTrack(prev, targetTrack.id, {
+                    ...existing,
+                    channels: [],
+                  });
+                });
               }
 
               setRecordingState((prev) => ({
