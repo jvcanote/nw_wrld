@@ -1419,31 +1419,41 @@ const Dashboard = () => {
           title={
             workspaceModalMode === "lostSync"
               ? "PROJECT FOLDER NOT FOUND"
-              : "OPEN PROJECT"
+              : `Welcome to "nw_wrld"`
           }
           onClose={() => {}}
           showClose={false}
+          uppercase={workspaceModalMode === "lostSync"}
+          containerClassName="justify-center"
+          titleClassName="block w-full text-center"
         />
         <div className="flex flex-col gap-4">
-          <div className="text-neutral-300/70">
+          <div className="text-neutral-400">
             {workspaceModalMode === "lostSync"
               ? "We lost sync with your project folder. It may have been moved or renamed. Reopen the project folder to continue."
-              : "Open (or create) a project folder to begin. Your project folder contains your modules and performance data."}
+              : "Open or create a project to begin. This project folder will contain your modules and performance data."}
           </div>
+          {workspaceModalMode === "lostSync" ? null : (
+            <div className="text-neutral-500">
+              PS: This app is currently in beta and changes frequently. Projects
+              created with earlier versions may not load correctly; backwards
+              compatibility is not guaranteed until a stable release.
+            </div>
+          )}
           {workspaceModalPath || workspacePath ? (
             <div className="text-neutral-300/50 break-all">
               {workspaceModalPath || workspacePath}
             </div>
           ) : null}
         </div>
-        <ModalFooter>
-          <div className="flex justify-end gap-3">
-            <Button onClick={handleSelectWorkspace}>
-              {workspaceModalMode === "lostSync"
-                ? "REOPEN PROJECT"
-                : "OPEN PROJECT"}
-            </Button>
-          </div>
+        <ModalFooter
+          justify={workspaceModalMode === "lostSync" ? "end" : "center"}
+        >
+          <Button type="secondary" onClick={handleSelectWorkspace}>
+            {workspaceModalMode === "lostSync"
+              ? "REOPEN PROJECT"
+              : "OPEN PROJECT"}
+          </Button>
         </ModalFooter>
       </Modal>
     </div>
